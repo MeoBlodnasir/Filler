@@ -6,7 +6,7 @@
 /*   By: aduban <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2016/05/24 14:33:38 by aduban            #+#    #+#             */
-/*   Updated: 2016/05/25 19:41:47 by aduban           ###   ########.fr       */
+/*   Updated: 2016/05/26 19:15:58 by aduban           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,11 +83,16 @@ int fill_meta(char *str, t_meta *meta)
 			i++;
 		}
 	}
-	else if (ft_isdigit(str[0]) && ft_isdigit(str[2]) &&ft_isdigit(str[1]))
+	else if ((ft_isdigit(str[0]) && ft_isdigit(str[2]) &&ft_isdigit(str[1]) && str[3] == ' ') || (int)ft_strlen(str) == meta->width)
 	{
 		fprintf(stderr, "filling tab..\n");
 		char *nbp;
 		nbp = ft_strsub(str, 0, 3);
+		int y = ft_atoi(nbp);
+		free(nbp);
+		if (y >= meta->height){
+			fprintf(stderr, "PROBLEM PROBLEM y = %d and height = %d\n", y, meta->height);
+		}
 		int i = 0;
 		while (i < meta->width && i+4 < (int)ft_strlen(str))
 		{
@@ -100,9 +105,7 @@ int fill_meta(char *str, t_meta *meta)
 		
 		fprintf(stderr, "checking piece size..\n");
 
-		static char **tab;
-		if (tab != NULL)
-			return 0;
+		char **tab;
 		char * str2 = ft_strsub(str, 0, ft_strlen(str) -1);
 		tab = ft_strsplit(str2, ' ');
 		meta->pwidth = ft_atoi(tab[2]);
@@ -111,6 +114,7 @@ int fill_meta(char *str, t_meta *meta)
 		free(tab[1]);
 		free(tab[2]);
 		free(tab);
+		free(str2);
 		meta->piece = (char **)malloc(sizeof(char*) * meta->pwidth);
 		int i = 0;
 		while (i < meta->pwidth)
@@ -118,15 +122,18 @@ int fill_meta(char *str, t_meta *meta)
 			meta->piece[i] = (char *)malloc(sizeof(char) * meta->pheight);
 			i++;
 		}
+		fprintf(stderr, "piece size %d %d\n", meta->pwidth, meta->pheight);
 
 	}
-	else if (str[0] == '*' || str[0] == '.')
-	{	fprintf(stderr, "filling piece...\n");	
+	else if ((str[0] == '*' || str[0] == '.') && (int)ft_strlen(str) == meta->pwidth)
+	{	fprintf(stderr, "RAW STR = %s\n", str);
+		fprintf(stderr, "filling piece...\n");	
 
 		int i = 0;
 		while (i < meta->pwidth)
 		{
 			meta->piece[i][nb] = str[i];
+			fprintf(stderr, "char filled: %c\n", str[i]);
 			i++;
 		}
 		nb++;
@@ -136,8 +143,11 @@ int fill_meta(char *str, t_meta *meta)
 			nb = 0;
 			return 1;
 		}
-			fprintf(stderr, "one line piece filling complete\n");
+		fprintf(stderr, "one line piece filling complete\n");
 
+	}
+	else {
+		fprintf(stderr, "IMPOSSIBLE BITCH RAW STRE IS: %s\n", str);
 	}
 	return 0;
 }
@@ -154,15 +164,21 @@ int	check_spot(int i, int j, t_meta *meta)
 		{
 			if (meta->piece[a][b] == '*')
 			{
-			//	fprintf(stderr, "comparing mychar %c", ft_toupper(meta->c));
-				if (j+a < meta->width && i+b < meta->height && (meta->tab[j+a][i+b] == meta->c ||meta->tab[j+a][i+b] == ft_toupper(meta->c))  )
+				fprintf(stderr, "first CHECK\n");
+				if (j+a >= meta->width || i+b >= meta->height)
+					return 0;
+				fprintf(stderr, "second CHECK\n");
+				if (meta->tab[j+a][i+b] == meta->e || meta->tab[j+a][i+b] == ft_toupper(meta->e))
+					return 0;
+				fprintf(stderr, "third CHECK\n");
+				if (meta->tab[j+a][i+b] == meta->c || meta->tab[j+a][i+b] == ft_toupper(meta->c))
 				{
 					ok++;
+					if (ok > 1)
+						return 0;
 				}
-				else if (j+a < meta->width && i+b < meta->height && (meta->tab[j+a][i+b] == meta->e ||meta->tab[j+a][i+b] == ft_toupper(meta->e))  )
-				{
-					return 0;
-				}
+				fprintf(stderr, "ALL CHECK\n");
+
 			}
 			a++;
 		}
@@ -180,12 +196,10 @@ void	play(t_meta *meta)
 	fprintf(stderr, "trying to play\n");
 	int i = 0;
 	int j = 0;
-	int h = 0;
 	while (i < meta->height)
 	{
 		while (j < meta->width)
 		{
-				h++;
 			if (check_spot(i, j, meta) == 1){
 				fprintf(stderr, "PLAYING NOW %d %d\n", i, j);
 				char *xstr = ft_itoa(i);	
@@ -212,37 +226,33 @@ void	play(t_meta *meta)
 }
 
 
-void free_all(t_meta meta)
-{
-	int i = 0;
-	while (i < meta.pwidth) {
-		free(meta.piece[i]);
-	}
-	free(meta.piece);
-	i = 0;
-	while (i < meta.width) {
-		free(meta.tab[i]);
-	}
-	free(meta.tab);
-}
-
 int main(void)
 {
 	t_meta meta;
+	meta.piece = NULL;
 	char *str;
 	while (42)
 	{
-		fprintf(stderr, "NEW TURN\n");
+		//	fprintf(stderr, "NEW TURN\n");
 		while (get_next_line(0, &str) == 1)
 		{
 			int ret = 0;
+			fprintf(stderr, "STRING TO ANALYZE %s\n", str);
 			ret  = fill_meta(str, &meta);	
 			if (ret) {
 				fprintf(stderr, "width  %d, height %d, mychar %c\n", meta.width, meta.height, meta.c);
 				//	print_tab(meta);
-				//	print_piece(meta);
+				print_piece(meta);
 				play(&meta);
-			//	free_all(meta);
+				int i = 0;
+				while (i < meta.pwidth)
+				{
+					if (meta.piece[i] != NULL)
+						free(meta.piece[i]);
+					i++;
+				}
+				free(meta.piece);
+				//	free_all(meta);
 				ret = 0;
 			}
 		}
